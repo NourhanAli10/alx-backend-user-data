@@ -9,6 +9,8 @@ from os import environ
 import mysql.connector
 from typing import List, Tuple
 
+PII_FIELDS: Tuple[str, ...] = ("name", "email", "phone", "ssn", "password")
+
 
 def filter_datum(fields: List[str], redaction: str,
                  message: str, separator: str) -> str:
@@ -26,44 +28,6 @@ def filter_datum(fields: List[str], redaction: str,
     """
     pattern = f"({'|'.join(fields)})=[^;{separator}]*"
     return re.sub(pattern, lambda m: f"{m.group(1)}={redaction}", message)
-
-
-class RedactingFormatter(logging.Formatter):
-    """
-    Redacting Formatter class to obfuscate sensitive
-    information in log records.
-    """
-
-    REDACTION = "***"
-    FORMAT = "[HOLBERTON] %(name)s %(levelname)s %(asctime)-15s: %(message)s"
-    SEPARATOR = ";"
-
-    def __init__(self, fields: List[str]):
-        """
-        Initializes the formatter with the specified fields to redact.
-
-        Args:
-            fields (List[str]): List of fields to obfuscate.
-        """
-        super(RedactingFormatter, self).__init__(self.FORMAT)
-        self.fields = fields
-
-    def format(self, record: logging.LogRecord) -> str:
-        """
-        Formats the log record, redacting specified fields.
-
-        Args:
-            record (logging.LogRecord): The original log record.
-
-        Returns:
-            str: The formatted and obfuscated log record.
-        """
-        original_message = super(RedactingFormatter, self).format(record)
-        return filter_datum(self.fields, self.REDACTION,
-                            original_message, self.SEPARATOR)
-
-
-PII_FIELDS: Tuple[str, ...] = ("name", "email", "phone", "ssn", "password")
 
 
 def get_logger() -> logging.Logger:
@@ -122,6 +86,42 @@ def main():
 
     cursor.close()
     db.close()
+    
+
+
+class RedactingFormatter(logging.Formatter):
+    """
+    Redacting Formatter class to obfuscate sensitive
+    information in log records.
+    """
+
+    REDACTION = "***"
+    FORMAT = "[HOLBERTON] %(name)s %(levelname)s %(asctime)-15s: %(message)s"
+    SEPARATOR = ";"
+
+    def __init__(self, fields: List[str]):
+        """
+        Initializes the formatter with the specified fields to redact.
+
+        Args:
+            fields (List[str]): List of fields to obfuscate.
+        """
+        super(RedactingFormatter, self).__init__(self.FORMAT)
+        self.fields = fields
+
+    def format(self, record: logging.LogRecord) -> str:
+        """
+        Formats the log record, redacting specified fields.
+
+        Args:
+            record (logging.LogRecord): The original log record.
+
+        Returns:
+            str: The formatted and obfuscated log record.
+        """
+        original_message = super(RedactingFormatter, self).format(record)
+        return filter_datum(self.fields, self.REDACTION,
+                            original_message, self.SEPARATOR)
 
 
 if __name__ == "__main__":
