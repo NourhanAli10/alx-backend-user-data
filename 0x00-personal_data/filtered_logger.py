@@ -5,6 +5,8 @@ filtered_logger.py
 
 import re
 import logging
+import os
+import mysql.connector
 from typing import List, Tuple
 
 
@@ -86,3 +88,51 @@ def get_logger() -> logging.Logger:
     logger.addHandler(stream_handler)
 
     return logger
+
+
+def get_db() -> mysql.connector.connection.MySQLConnection:
+    """
+    Connects to the MySQL database using credentials
+    from environment variables.
+
+    Returns:
+        mysql.connector.connection.MySQLConnection: Database connection object.
+    """
+    username = os.getenv("PERSONAL_DATA_DB_USERNAME", "root")
+    password = os.getenv("PERSONAL_DATA_DB_PASSWORD", "")
+    host = os.getenv("PERSONAL_DATA_DB_HOST", "localhost")
+    database = os.getenv("PERSONAL_DATA_DB_NAME")
+
+    return mysql.connector.connect(
+        user=username,
+        password=password,
+        host=host,
+        database=database
+    )
+
+
+def main():
+    """
+    Main function that retrieves all rows in the users
+    table and logs each row in a filtered format.
+    """
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("SELECT * FROM users;")
+    logger = get_logger()
+
+    for row in cursor.fetchall():
+        message = (
+            f"name={row[0]}; email={row[1]}; phone={row[2]}; ssn={row[3]}; "
+            f"password={row[4]}; ip={row[5]}; last_login={row[6]}; "
+            f"user_agent={row[7]};"
+        )
+        logger.info(message)
+
+    cursor.close()
+    db.close()
+
+
+if __name__ == "__main__":
+    main()
