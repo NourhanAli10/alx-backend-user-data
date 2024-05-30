@@ -5,7 +5,7 @@ filtered_logger.py
 
 import re
 import logging
-import os
+from os import environ
 import mysql.connector
 from typing import List, Tuple
 
@@ -91,44 +91,34 @@ def get_logger() -> logging.Logger:
 
 
 def get_db() -> mysql.connector.connection.MySQLConnection:
-    """
-    Connects to the MySQL database using credentials
-    from environment variables.
+    """ Returns a connector to a MySQL database """
+    username = environ.get("PERSONAL_DATA_DB_USERNAME", "root")
+    password = environ.get("PERSONAL_DATA_DB_PASSWORD", "")
+    host = environ.get("PERSONAL_DATA_DB_HOST", "localhost")
+    db_name = environ.get("PERSONAL_DATA_DB_NAME")
 
-    Returns:
-        mysql.connector.connection.MySQLConnection: Database connection object.
-    """
-    username = os.getenv("PERSONAL_DATA_DB_USERNAME", "root")
-    password = os.getenv("PERSONAL_DATA_DB_PASSWORD", "")
-    host = os.getenv("PERSONAL_DATA_DB_HOST", "localhost")
-    database = os.getenv("PERSONAL_DATA_DB_NAME")
-
-    return mysql.connector.connect(
-        user=username,
-        password=password,
-        host=host,
-        database=database
-    )
+    cnx = mysql.connector.connection.MySQLConnection(user=username,
+                                                     password=password,
+                                                     host=host,
+                                                     database=db_name)
+    return cnx
 
 
 def main():
     """
-    Main function that retrieves all rows in the users
-    table and logs each row in a filtered format.
+    Obtain a database connection using get_db and retrieves all rows
+    in the users table and display each row under a filtered format
     """
     db = get_db()
     cursor = db.cursor()
-
     cursor.execute("SELECT * FROM users;")
+    field_names = [i[0] for i in cursor.description]
+
     logger = get_logger()
 
-    for row in cursor.fetchall():
-        message = (
-            f"name={row[0]}; email={row[1]}; phone={row[2]}; ssn={row[3]}; "
-            f"password={row[4]}; ip={row[5]}; last_login={row[6]}; "
-            f"user_agent={row[7]};"
-        )
-        logger.info(message)
+    for row in cursor:
+        str_row = ''.join(f'{f}={str(r)}; ' for r, f in zip(row, field_names))
+        logger.info(str_row.strip())
 
     cursor.close()
     db.close()
